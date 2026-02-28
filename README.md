@@ -98,7 +98,8 @@ FRONTEND_URL=http://localhost:3000
 
 ## النشر على VPS (Hostinger أو غيره)
 
-لنشر المشروع على سيرفر VPS باستخدام **دومين فرعي** (بدون تداخل مع مشاريعك الأخرى)، راجع **[DEPLOYMENT.md](DEPLOYMENT.md)** — يتضمن إعداد Hostinger، Nginx لدومين فرعي، ومسار مستقل للمشروع.
+- **أول مرة تنشر فيها؟** اتبع **[DEPLOY_STEPS.md](DEPLOY_STEPS.md)** خطوة بخطوة (قاعدة البيانات تُنشأ تلقائياً مع SQLite).
+- للتفاصيل والبديل MySQL: **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
 
