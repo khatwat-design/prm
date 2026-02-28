@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMyDailyReports, getMe, syncMetaCampaigns, PLATFORMS, type DailyReportItem } from '@/lib/api';
 import { SalesModal } from '@/components/dashboard/SalesModal';
@@ -66,8 +66,6 @@ function getDefaultFromTo(): { from: string; to: string } {
   };
 }
 
-const CHART_DAYS = 21;
-
 function TrendBadge({ value, label }: { value: number | null; label?: string }) {
   if (value === null || value === undefined) return <span className="text-xs text-slate-400 dark:text-slate-500">—</span>;
   const up = value >= 0;
@@ -121,6 +119,16 @@ export default function ClientDashboardPage() {
       .catch(() => setMetaConnected(false));
   }, [mounted]);
 
+  const loadReports = useCallback(() => {
+    if (!mounted) return;
+    setError('');
+    setLoading(true);
+    getMyDailyReports({ from: dateFrom, to: dateTo, per_page: 100 })
+      .then((res) => setReports(res.data || []))
+      .catch(() => setError('فشل تحميل البيانات'))
+      .finally(() => setLoading(false));
+  }, [mounted, dateFrom, dateTo]);
+
   /** مزامنة تلقائية مستمرة لتحليلات ميتا عند ربط الحساب */
   useEffect(() => {
     if (!mounted || metaConnected !== true) return;
@@ -132,21 +140,11 @@ export default function ClientDashboardPage() {
     runSync();
     const interval = setInterval(runSync, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [mounted, metaConnected]);
-
-  function loadReports() {
-    if (!mounted) return;
-    setError('');
-    setLoading(true);
-    getMyDailyReports({ from: dateFrom, to: dateTo, per_page: 100 })
-      .then((res) => setReports(res.data || []))
-      .catch(() => setError('فشل تحميل البيانات'))
-      .finally(() => setLoading(false));
-  }
+  }, [mounted, metaConnected, loadReports]);
 
   useEffect(() => {
     loadReports();
-  }, [mounted, dateFrom, dateTo]);
+  }, [loadReports]);
 
   const byDate = reports.reduce<Record<string, DailyReportItem[]>>((acc, r) => {
     const d = normalizeDateKey(String(r.date));
@@ -168,13 +166,8 @@ export default function ClientDashboardPage() {
     { orders: 0, revenue: 0, spend: 0 }
   );
   const daysCount = dates.length || 1;
-  const avgOrders = Math.round((totals.orders / daysCount) * 10) / 10;
-  const avgRevenue = Math.round((totals.revenue / daysCount) * 100) / 100;
-  const avgSpend = Math.round((totals.spend / daysCount) * 100) / 100;
   const profit = totals.revenue - totals.spend;
   const roas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
-  const maxRevenue = Math.max(1, ...dates.map((d) => byDate[d].reduce((s, r) => s + Number(r.order_value || 0), 0)));
-  const maxOrders = Math.max(1, ...dates.map((d) => byDate[d].reduce((s, r) => s + (r.orders_count || 0), 0)));
   const chartDates = dates.slice(0, chartRangeDays);
 
   const lastDate = dates[0];

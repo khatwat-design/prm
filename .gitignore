@@ -1,6 +1,8 @@
 # جذر المشروع — لا ترفع ملفات بيئة أو مؤقتة
 .env
 .env.*
+# استثناء: رفع .env.example للنشر
+!backend/.env.example
 .DS_Store
 *.log
 .idea
