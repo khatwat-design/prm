@@ -165,7 +165,6 @@ export default function ClientDashboardPage() {
     },
     { orders: 0, revenue: 0, spend: 0 }
   );
-  const daysCount = dates.length || 1;
   const profit = totals.revenue - totals.spend;
   const roas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
   const chartDates = dates.slice(0, chartRangeDays);
