@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getMe,
@@ -13,7 +13,7 @@ import {
 import { Toast, type ToastType } from '@/components/ui/Toast';
 import { Link2, Loader2, Check } from 'lucide-react';
 
-export default function ClientSettingsPage() {
+function ClientSettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -229,5 +229,13 @@ export default function ClientSettingsPage() {
         />
       )}
     </>
+  );
+}
+
+export default function ClientSettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-12"><p className="text-slate-500">جاري التحميل...</p></div>}>
+      <ClientSettingsContent />
+    </Suspense>
   );
 }
