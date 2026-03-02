@@ -438,7 +438,7 @@ export default function ClientDashboardPage() {
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number | undefined, _name?: string) => [`${value != null ? value.toFixed(2) : '—'} $`, '']} />
+                    <Tooltip formatter={(value: number | undefined) => [`${value != null ? value.toFixed(2) : '—'} $`, '']} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
