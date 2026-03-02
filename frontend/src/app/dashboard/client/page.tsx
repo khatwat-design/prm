@@ -403,7 +403,7 @@ export default function ClientDashboardPage() {
                   <YAxis tick={{ fontSize: 11 }} className="text-slate-500" tickFormatter={(v) => `${v}$`} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: '1px solid var(--tw-border-color)' }}
-                    formatter={(value: number, name: string) => [`${Number(value).toFixed(2)} $`, name]}
+                    formatter={(value: number | undefined, name: string) => [`${value != null ? Number(value).toFixed(2) : '—'} $`, name]}
                     labelFormatter={(label) => label}
                   />
                   <Area type="monotone" dataKey="revenue" name="المبيعات" stroke="#f97316" fill="url(#areaRevenue)" strokeWidth={2} />
@@ -438,7 +438,7 @@ export default function ClientDashboardPage() {
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => [`${value.toFixed(2)} $`, '']} />
+                    <Tooltip formatter={(value: number | undefined) => [`${value != null ? value.toFixed(2) : '—'} $`, '']} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
