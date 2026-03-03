@@ -119,24 +119,26 @@ export default function AdminPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-brand-black" dir="rtl">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950" dir="rtl">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-brand-black" dir="rtl">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950" dir="rtl">
       <AdminNav activeSection={activeSection} onSectionChange={setActiveSection} />
-      <main className="md:mr-56 pt-14 md:pt-0 md:min-h-screen p-4 md:p-8">
-        <div className="max-w-[1200px] mx-auto">
+      <main className="md:mr-60 pt-14 md:pt-0 md:min-h-screen px-4 py-6 md:px-8 md:py-8">
+        <div className="max-w-[1200px] mx-auto space-y-6">
           {activeSection === 'overview' && (
             <>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">النظرة الشاملة</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">إحصائيات إجمالية للمبيعات والصرف والعملاء حسب الفترة.</p>
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="h-5 w-5 text-brand-orange" />
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">النظرة الشاملة</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">إحصائيات إجمالية للمبيعات والصرف والعملاء حسب الفترة.</p>
+        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             <h2 className="text-lg font-semibold text-slate-800 dark:text-white">الفترة</h2>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -150,22 +152,22 @@ export default function AdminPage() {
             </label>
           </div>
           {statsLoading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-8 w-8 animate-spin text-brand-orange" /></div>
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>
           ) : stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 dark:border-slate-600 p-5">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">إجمالي المبيعات ($)</p>
                 <p className="text-xl font-bold text-slate-800 dark:text-white">{stats.total_order_value.toFixed(2)}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 dark:border-slate-600 p-5">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">إجمالي الصرف ($)</p>
                 <p className="text-xl font-bold text-slate-800 dark:text-white">{stats.total_ad_spend.toFixed(2)}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 dark:border-slate-600 p-5">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">عدد العملاء</p>
                 <p className="text-xl font-bold text-slate-800 dark:text-white">{stats.clients_count}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/80 dark:border-slate-600 p-5">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">المستخدمون النشطون</p>
                 <p className="text-xl font-bold text-slate-800 dark:text-white">{stats.users_count}</p>
               </div>
@@ -177,18 +179,20 @@ export default function AdminPage() {
 
           {activeSection === 'users' && (
             <>
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">المستخدمون</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">إدارة حسابات المستخدمين والأدوار.</p>
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">المستخدمون</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">إدارة حسابات المستخدمين والأدوار.</p>
+        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-brand-orange" />
+              <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
               <h2 className="text-lg font-semibold text-slate-800 dark:text-white">قائمة المستخدمين</h2>
             </div>
             <button
               type="button"
               onClick={() => setShowAddUser(true)}
-              className="flex items-center gap-2 rounded-xl bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-dark"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
             >
               <UserPlus className="h-4 w-4" />
               إضافة مستخدم
@@ -196,7 +200,7 @@ export default function AdminPage() {
           </div>
           {error && <div className="mx-4 mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">{error}</div>}
           {usersLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-brand-orange" /></div>
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -262,7 +266,7 @@ export default function AdminPage() {
 
       {showAddUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800 p-6 shadow-xl">
             <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">إضافة مستخدم</h2>
             <form onSubmit={handleAddUser} className="space-y-3">
               <div>
@@ -290,7 +294,7 @@ export default function AdminPage() {
                 </select>
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-orange py-2.5 font-medium text-white hover:bg-brand-orange-dark disabled:opacity-50">
+                <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 disabled:opacity-50">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'إضافة'}
                 </button>
                 <button type="button" onClick={() => { setShowAddUser(false); setError(''); }} className="rounded-xl border border-slate-300 px-4 py-2.5 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">إلغاء</button>

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { BarChart3, FileSpreadsheet, UserPlus, Shield, LogOut, Menu } from 'lucide-react';
+import { BarChart3, FileSpreadsheet, UserPlus, LogOut, Menu } from 'lucide-react';
 import { logout } from '@/lib/api';
 
 export type MediaBuyerSection = 'unified' | 'sales';
@@ -16,10 +15,9 @@ interface MediaBuyerNavProps {
   activeSection: MediaBuyerSection;
   onSectionChange: (s: MediaBuyerSection) => void;
   onAddClient: () => void;
-  isAdmin?: boolean;
 }
 
-export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isAdmin }: MediaBuyerNavProps) {
+export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient }: MediaBuyerNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function handleLogout() {
@@ -29,7 +27,7 @@ export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isA
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex md:hidden items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-brand-black/95 px-4 py-3">
+      <header className="sticky top-0 z-50 flex md:hidden items-center justify-between border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 px-4 py-3.5 shadow-sm">
         <span className="text-lg font-bold text-slate-800 dark:text-white">الميديا باير</span>
         <button
           type="button"
@@ -49,12 +47,12 @@ export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isA
         />
       )}
       <nav
-        className={`fixed top-[52px] right-0 z-40 w-72 max-w-[85vw] border-l border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 shadow-xl md:hidden transition-transform duration-200 ${
+        className={`fixed top-[56px] right-0 z-40 w-72 max-w-[85vw] border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-xl md:hidden transition-transform duration-200 ${
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         dir="rtl"
       >
-        <div className="flex flex-col py-4">
+        <div className="flex flex-col py-3">
           {sections.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -76,16 +74,6 @@ export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isA
             <UserPlus className="h-5 w-5 shrink-0" />
             إضافة زبون
           </button>
-          {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <Shield className="h-5 w-5 shrink-0" />
-              لوحة الأدمن
-            </Link>
-          )}
           <button
             type="button"
             onClick={handleLogout}
@@ -97,11 +85,12 @@ export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isA
         </div>
       </nav>
 
-      <aside className="hidden md:flex md:flex-col md:fixed md:top-0 md:right-0 md:w-56 md:h-screen md:border-l md:border-slate-200 md:bg-white dark:md:border-slate-700 dark:md:bg-slate-900 md:shadow-card" dir="rtl">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+      <aside className="hidden md:flex md:flex-col md:fixed md:top-0 md:right-0 md:w-60 md:h-screen md:border-l md:border-slate-200 md:bg-white dark:md:border-slate-700 dark:md:bg-slate-900 md:shadow-lg" dir="rtl">
+        <div className="px-5 py-5 border-b border-slate-200 dark:border-slate-700 bg-brand-orange/5 dark:bg-brand-orange/10">
           <span className="text-lg font-bold text-slate-800 dark:text-white">الميديا باير</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">التقارير والزبائن</p>
         </div>
-        <div className="flex flex-col flex-1 py-4">
+        <div className="flex flex-col flex-1 py-4 overflow-y-auto">
           {sections.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -123,15 +112,6 @@ export function MediaBuyerNav({ activeSection, onSectionChange, onAddClient, isA
             <UserPlus className="h-5 w-5 shrink-0" />
             إضافة زبون
           </button>
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="flex items-center gap-3 px-4 py-3 mx-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <Shield className="h-5 w-5 shrink-0" />
-              لوحة الأدمن
-            </Link>
-          )}
           <div className="flex-1" />
           <button
             type="button"
