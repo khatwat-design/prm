@@ -520,13 +520,25 @@ export default function ClientDashboardPage() {
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">حسب المنصة</p>
                       <ul className="space-y-0 divide-y divide-slate-200 dark:divide-slate-700 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 overflow-hidden">
                         {dayReports.map((r) => (
-                          <li key={r.id} className="flex flex-wrap justify-between items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
-                            <span className="font-medium">{platformLabel(r.platform)}</span>
-                            <span className="tabular-nums text-slate-600 dark:text-slate-400 text-left">
-                              {(r.leads_count ?? 0) > 0 && <>{r.leads_count} رسالة · </>}
-                              {(Number(r.ad_spend) || 0) > 0 && <>{Number(r.ad_spend).toFixed(2)} $ صرف · </>}
-                              {r.orders_count} طلب — {Number(r.order_value).toFixed(2)} $ إيراد
-                            </span>
+                          <li key={r.id} className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                            <div className="flex flex-wrap justify-between items-center gap-2">
+                              <span className="font-medium">{platformLabel(r.platform)}</span>
+                              <span className="tabular-nums text-slate-600 dark:text-slate-400 text-left">
+                                {(r.leads_count ?? 0) > 0 && <>{r.leads_count} رسالة · </>}
+                                {(Number(r.ad_spend) || 0) > 0 && <>{Number(r.ad_spend).toFixed(2)} $ صرف · </>}
+                                {r.orders_count} طلب — {Number(r.order_value).toFixed(2)} $ إيراد
+                              </span>
+                            </div>
+                            {r.items && r.items.length > 0 && (
+                              <ul className="mt-2 mr-4 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                {r.items.map((item) => (
+                                  <li key={item.id}>
+                                    {item.product?.name ?? 'منتج'} × {item.quantity}
+                                    {item.unit_price != null && ` — ${Number(item.unit_price).toFixed(2)} $`}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
                           </li>
                         ))}
                       </ul>

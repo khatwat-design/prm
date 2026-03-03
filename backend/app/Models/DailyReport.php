@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DailyReport extends Model
 {
@@ -19,6 +20,7 @@ class DailyReport extends Model
         'date',
         'platform',
         'leads_count',
+        'link_clicks_count',
         'orders_count',
         'ad_spend',
         'order_value',
@@ -37,6 +39,8 @@ class DailyReport extends Model
         'cac',
         'profit_after_spend',
         'roas',
+        'conversion_from_messages',
+        'conversion_from_visits',
     ];
 
     /**
@@ -45,6 +49,14 @@ class DailyReport extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * بنود المبيعات (منتج + كمية) لهذا السطر
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(DailyReportItem::class, 'daily_report_id');
     }
 
     /**
@@ -110,6 +122,34 @@ class DailyReport extends Model
                 return 0.0;
             }
             return round((float) $this->order_value / $spend, 2);
+        });
+    }
+
+    /**
+     * تحويل من الرسائل % = (orders_count / leads_count) * 100
+     */
+    protected function conversionFromMessages(): Attribute
+    {
+        return Attribute::get(function (): float {
+            $leads = (int) $this->leads_count;
+            if ($leads <= 0) {
+                return 0.0;
+            }
+            return round((int) $this->orders_count / $leads * 100, 2);
+        });
+    }
+
+    /**
+     * تحويل من الزيارات (نقرات الرابط) % = (orders_count / link_clicks_count) * 100
+     */
+    protected function conversionFromVisits(): Attribute
+    {
+        return Attribute::get(function (): float {
+            $clicks = (int) ($this->link_clicks_count ?? 0);
+            if ($clicks <= 0) {
+                return 0.0;
+            }
+            return round((int) $this->orders_count / $clicks * 100, 2);
         });
     }
 }

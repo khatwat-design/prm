@@ -23,7 +23,8 @@ export default function LoginPage() {
         localStorage.setItem('khtwat_user', JSON.stringify(user));
       }
       if (user.role === 'client') router.push('/dashboard/client');
-      else if (user.role === 'admin' || user.role === 'mediabuyer') router.push('/mediabuyer');
+      else if (user.role === 'admin') router.push('/admin');
+      else if (user.role === 'mediabuyer') router.push('/mediabuyer');
       else router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ');
@@ -52,10 +53,11 @@ export default function LoginPage() {
           )}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              البريد الإلكتروني
+              البريد الإلكتروني أو اسم المستخدم
             </label>
             <input
-              type="email"
+              type="text"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-800 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"

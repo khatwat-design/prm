@@ -4,7 +4,10 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\DailyReportController;
 use App\Http\Controllers\Api\MetaAuthController;
 use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\OverviewController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -24,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // المستخدم الحالي + بيانات الزبون (للزبون: meta_connected، fb_ad_account_id)
     Route::get('/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);
+    Route::patch('/me', [\App\Http\Controllers\Api\AuthController::class, 'updateProfile']);
     Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
 
     // قائمة الزبائن — للميديا باير / الأدمن فقط
@@ -32,7 +36,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/clients', [ClientController::class, 'store'])
         ->middleware('can.manage.clients');
 
-    // التقارير اليومية — الزبون يدخل (عدد الطلبات + مبلغ الطلبات) فقط لكل منصة
+    // إدارة المستخدمين — الأدمن فقط
+    Route::get('/users', [UserController::class, 'index'])->middleware('admin');
+    Route::post('/users', [UserController::class, 'store'])->middleware('admin');
+    Route::put('/users/{user}', [UserController::class, 'update'])->middleware('admin');
+
+    // نظرة شاملة — إحصائيات مع فلترة (ميديا باير + أدمن)
+    Route::get('/overview/stats', [OverviewController::class, 'stats'])
+        ->middleware('can.manage.clients');
+
+    // منتجات الزبون (للمبيعات بالمنتج + الكمية)
+    Route::apiResource('products', ProductController::class)->except(['create', 'show', 'edit']);
+
+    // التقارير اليومية — الزبون يدخل (عدد الطلبات + مبلغ الطلبات) أو بنود منتجات
     Route::apiResource('daily-reports', DailyReportController::class)->only(['index', 'store']);
 
     // حفظ مبيعات اليوم كمجموعة (مصفوفة من المنصات) — للواجهة

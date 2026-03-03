@@ -14,20 +14,27 @@ use Illuminate\Support\Facades\Http;
  */
 class MetaController extends Controller
 {
+    private function resolveClient(Request $request): ?Client
+    {
+        $user = $request->user();
+        if ($user->role === 'client') {
+            return $user->client;
+        }
+        if ($user->canManageClients() && $request->has('client_id')) {
+            return Client::find($request->input('client_id'));
+        }
+        return null;
+    }
+
     /**
-     * GET /api/meta/ad-accounts — قائمة الحسابات الإعلانية المرتبطة بحساب الزبون.
+     * GET /api/meta/ad-accounts — قائمة الحسابات الإعلانية. للزبون: حسابه. للميديا باير: client_id مطلوب.
      */
     public function adAccounts(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $client = $user->client;
+        $client = $this->resolveClient($request);
 
         if (! $client) {
-            return response()->json(['message' => 'لا يوجد حساب زبون مرتبط.'], 403);
-        }
-
-        if ($user->role !== 'client') {
-            return response()->json(['message' => 'غير مصرح.'], 403);
+            return response()->json(['message' => 'لا يوجد حساب زبون (مرّر client_id للميديا باير).'], 403);
         }
 
         if (! $client->meta_connected || ! $client->long_lived_token) {
@@ -62,20 +69,14 @@ class MetaController extends Controller
     }
 
     /**
-     * POST /api/meta/save-account — حفظ الحساب الإعلاني المختار (fb_ad_account_id).
-     * الاستجابة فورية؛ سحب البيانات يتم لاحقاً عبر POST /api/meta/sync (من لوحة التحليلات أو بعد الحفظ من الواجهة).
+     * POST /api/meta/save-account — حفظ الحساب الإعلاني. للزبون: حسابه. للميديا باير: client_id مطلوب.
      */
     public function saveAccount(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $client = $user->client;
+        $client = $this->resolveClient($request);
 
         if (! $client) {
-            return response()->json(['message' => 'لا يوجد حساب زبون مرتبط.'], 403);
-        }
-
-        if ($user->role !== 'client') {
-            return response()->json(['message' => 'غير مصرح.'], 403);
+            return response()->json(['message' => 'لا يوجد حساب زبون (مرّر client_id للميديا باير).'], 403);
         }
 
         $request->validate([
@@ -91,20 +92,14 @@ class MetaController extends Controller
     }
 
     /**
-     * POST /api/meta/sync — سحب بيانات الصرف وعدد الرسائل من ميتا لنطاق تواريخ وحفظها في التقارير اليومية.
-     * للزبون المرتبط بميتا فقط. يُستخدم لعرض بيانات الحملات في لوحة التاجر ولوحة الميديا باير.
+     * POST /api/meta/sync — سحب بيانات الصرف والرسائل ونقرات الرابط من ميتا. للزبون: حسابه. للميديا باير: client_id مطلوب.
      */
     public function sync(Request $request, MetaAdsService $metaAdsService): JsonResponse
     {
-        $user = $request->user();
-        $client = $user->client;
+        $client = $this->resolveClient($request);
 
         if (! $client) {
-            return response()->json(['message' => 'لا يوجد حساب زبون مرتبط.'], 403);
-        }
-
-        if ($user->role !== 'client') {
-            return response()->json(['message' => 'غير مصرح.'], 403);
+            return response()->json(['message' => 'لا يوجد حساب زبون (مرّر client_id للميديا باير).'], 403);
         }
 
         if (! $client->meta_connected || ! $client->long_lived_token || ! $client->fb_ad_account_id) {

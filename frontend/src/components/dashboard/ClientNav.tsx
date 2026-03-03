@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, Settings, LogOut, Menu, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Settings, LogOut, Menu, Sun, Moon, Package } from 'lucide-react';
 import { logout } from '@/lib/api';
 
 const navItems = [
   { href: '/dashboard/client', label: 'الرئيسية', icon: LayoutDashboard },
+  { href: '/dashboard/client/products', label: 'المنتجات', icon: Package },
   { href: '/dashboard/client/settings', label: 'إعدادات الربط', icon: Settings },
 ] as const;
 

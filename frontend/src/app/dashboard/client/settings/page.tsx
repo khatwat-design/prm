@@ -2,16 +2,9 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  getMe,
-  getMetaRedirectUrl,
-  getMetaAdAccounts,
-  saveMetaAccount,
-  syncMetaCampaigns,
-  type MetaAdAccount,
-} from '@/lib/api';
+import { getMe, updateProfile } from '@/lib/api';
 import { Toast, type ToastType } from '@/components/ui/Toast';
-import { Link2, Loader2, Check } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 
 function ClientSettingsContent() {
   const router = useRouter();
@@ -19,11 +12,8 @@ function ClientSettingsContent() {
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [clientProfile, setClientProfile] = useState<{ meta_connected: boolean; fb_ad_account_id: string | null } | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(false);
-  const [adAccounts, setAdAccounts] = useState<MetaAdAccount[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [selectedAdAccountId, setSelectedAdAccountId] = useState('');
-  const [savingAccount, setSavingAccount] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', username: '' });
 
   useEffect(() => setMounted(true), []);
 
@@ -51,6 +41,7 @@ function ClientSettingsContent() {
     getMe()
       .then((res) => {
         if (res.client) setClientProfile({ meta_connected: res.client.meta_connected, fb_ad_account_id: res.client.fb_ad_account_id ?? null });
+        setProfileForm({ name: res.user.name, username: res.user.username ?? '' });
       })
       .catch(() => setClientProfile(null));
   }, [mounted]);
@@ -58,10 +49,8 @@ function ClientSettingsContent() {
   useEffect(() => {
     const meta = searchParams.get('meta');
     if (meta === 'connected') {
-      setToast({ message: 'تم ربط حساب ميتا بنجاح. اختر الحساب الإعلاني أدناه.', type: 'success' });
-      setClientProfile((p) => (p ? { ...p, meta_connected: true } : { meta_connected: true, fb_ad_account_id: null }));
+      setToast({ message: 'تم ربط حساب ميتا بنجاح.', type: 'success' });
       window.history.replaceState({}, '', '/dashboard/client/settings');
-      // جلب أحدث بيانات من الخادم بعد الربط لضمان تحديث الواجهة وقائمة الحسابات الإعلانية
       getMe().then((res) => {
         if (res.client) setClientProfile({ meta_connected: res.client.meta_connected, fb_ad_account_id: res.client.fb_ad_account_id ?? null });
       }).catch(() => {});
@@ -72,74 +61,26 @@ function ClientSettingsContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!mounted || !clientProfile?.meta_connected) return;
-    setLoadingAccounts(true);
-    getMetaAdAccounts()
-      .then((res) => {
-        setAdAccounts(res.data || []);
-        if (res.data?.length && clientProfile.fb_ad_account_id) {
-          const current = res.data.find((a) => (a.id || a.account_id) === clientProfile.fb_ad_account_id);
-          if (current) setSelectedAdAccountId(current.id || current.account_id || '');
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profileForm.name.trim()) return;
+    setProfileSaving(true);
+    try {
+      const user = await updateProfile({ name: profileForm.name.trim(), username: profileForm.username.trim() || null });
+      setProfileForm({ name: user.name, username: user.username ?? '' });
+      if (typeof window !== 'undefined') {
+        const u = localStorage.getItem('khtwat_user');
+        if (u) {
+          const parsed = JSON.parse(u);
+          localStorage.setItem('khtwat_user', JSON.stringify({ ...parsed, name: user.name, username: user.username ?? null }));
         }
-      })
-      .catch(() => setAdAccounts([]))
-      .finally(() => setLoadingAccounts(false));
-  }, [mounted, clientProfile?.meta_connected, clientProfile?.fb_ad_account_id]);
-
-  function handleConnectMeta() {
-    if (typeof window !== 'undefined' && !localStorage.getItem('khtwat_token')) {
-      setToast({ message: 'يجب تسجيل الدخول أولاً. أعد تسجيل الدخول ثم جرّب مرة أخرى.', type: 'error' });
-      return;
+      }
+      setToast({ message: 'تم تحديث الملف الشخصي.', type: 'success' });
+    } catch (err) {
+      setToast({ message: err instanceof Error ? err.message : 'فشل التحديث.', type: 'error' });
+    } finally {
+      setProfileSaving(false);
     }
-    setLoadingMeta(true);
-    getMetaRedirectUrl()
-      .then((res) => {
-        if (res.url) window.location.href = res.url;
-        else setToast({ message: 'لم يُرجَع رابط الربط.', type: 'error' });
-      })
-      .catch((err: Error) => {
-        let msg = err?.message || 'فشل جلب رابط الربط.';
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-          msg = 'تعذر الاتصال بالخادم. تأكد من تشغيل الـ Backend (php artisan serve) وعنوان NEXT_PUBLIC_API_URL.';
-        } else if (msg.includes('401') || msg.includes('Unauthenticated')) {
-          msg = 'انتهت الجلسة أو التوكن غير صالح. سجّل الخروج ثم ادخل مرة أخرى.';
-        }
-        setToast({ message: msg, type: 'error' });
-      })
-      .finally(() => setLoadingMeta(false));
-  }
-
-  function handleSaveAdAccount() {
-    if (!selectedAdAccountId.trim()) {
-      setToast({ message: 'اختر حساباً إعلانياً.', type: 'error' });
-      return;
-    }
-    setSavingAccount(true);
-    saveMetaAccount(selectedAdAccountId.trim())
-      .then((res) => {
-        setSavingAccount(false);
-        setToast({ message: res.message || 'تم حفظ الحساب الإعلاني.', type: 'success' });
-        setClientProfile((p) => (p ? { ...p, fb_ad_account_id: selectedAdAccountId.trim() } : null));
-        // سحب البيانات في الخلفية (لا ننتظر حتى لا يتعلق الزر)
-        syncMetaCampaigns({ days: 30 })
-          .then((r) => {
-            setToast({
-              message: r.synced_days > 0 ? `تم سحب بيانات ${r.synced_days} يوم من ميتا.` : 'تم تحديث البيانات.',
-              type: 'success',
-            });
-          })
-          .catch(() => {
-            setToast({
-              message: 'تم الحفظ. لم يكتمل سحب البيانات — ستُحدَّث عند فتح لوحة التحليلات.',
-              type: 'error',
-            });
-          });
-      })
-      .catch((err: Error) => {
-        setToast({ message: err?.message || 'فشل حفظ الحساب الإعلاني.', type: 'error' });
-      })
-      .finally(() => setSavingAccount(false));
   }
 
   if (!mounted) {
@@ -152,72 +93,50 @@ function ClientSettingsContent() {
 
   return (
     <>
-      <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">إعدادات الربط</h1>
+      <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">الإعدادات</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        ربط حساب ميتا لسحب الصرف وعدد الرسائل تلقائياً إلى تقاريرك.
+        الملف الشخصي وربط حساب ميتا لسحب الصرف وعدد الرسائل تلقائياً.
       </p>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50 mb-6">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-3">الملف الشخصي</h2>
+        <form onSubmit={handleSaveProfile} className="space-y-3">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">الاسم</label>
+          <input
+            type="text"
+            value={profileForm.name}
+            onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">اسم المستخدم (للدخول مع الإيميل)</label>
+          <input
+            type="text"
+            value={profileForm.username}
+            onChange={(e) => setProfileForm((p) => ({ ...p, username: e.target.value }))}
+            placeholder="اختياري"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <button
+            type="submit"
+            disabled={profileSaving}
+            className="flex items-center gap-2 rounded-xl bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-dark disabled:opacity-70"
+          >
+            {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            حفظ الملف الشخصي
+          </button>
+        </form>
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
-        {clientProfile === null ? (
-          <div className="py-2 text-sm text-slate-500 dark:text-slate-400">جاري التحميل...</div>
-        ) : !clientProfile.meta_connected ? (
-          <div>
-            <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
-              ربط حساب ميتا يسمح بسحب الصرف الإعلاني وعدد الرسائل تلقائياً إلى تقاريرك اليومية.
-            </p>
-            <button
-              type="button"
-              onClick={handleConnectMeta}
-              disabled={loadingMeta}
-              className="flex items-center gap-2 rounded-xl bg-brand-orange px-4 py-3 text-sm font-medium text-white hover:bg-brand-orange-dark disabled:opacity-70"
-            >
-              {loadingMeta ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-              ربط حساب Meta
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <Check className="h-4 w-4" />
-              حساب ميتا مرتبط.
-            </p>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              الحساب الإعلاني (Ad Account)
-            </label>
-            {loadingAccounts ? (
-              <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                جاري جلب الحسابات...
-              </div>
-            ) : (
-              <>
-                <select
-                  value={selectedAdAccountId}
-                  onChange={(e) => setSelectedAdAccountId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-                >
-                  <option value="">اختر الحساب الإعلاني</option>
-                  {adAccounts.map((acc) => (
-                    <option key={acc.id || acc.account_id || acc.name} value={acc.id || acc.account_id || ''}>
-                      {acc.name || acc.id || acc.account_id || '—'}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleSaveAdAccount}
-                  disabled={savingAccount || !selectedAdAccountId.trim()}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 disabled:opacity-60"
-                >
-                  {savingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  حفظ الاختيار
-                </button>
-                <p className="text-xs text-slate-500 dark:text-slate-400 pt-2">
-                  يتم سحب الصرف الإعلاني وعدد الرسائل من ميتا تلقائياً وباستمرار عند استخدام لوحة التحليلات.
-                </p>
-              </>
-            )}
-          </div>
+        <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-2">ربط ميتا</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          ربط حساب ميتا يتم من قبل الميديا باير لكل عميل. إذا لم يكن حسابك مرتبطاً أو تريد تغيير الحساب الإعلاني، تواصل مع الميديا باير.
+        </p>
+        {clientProfile?.meta_connected && (
+          <p className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <Check className="h-4 w-4" />
+            حساب ميتا مرتبط — يتم سحب الصرف والرسائل تلقائياً عند استخدام لوحة التحليلات.
+          </p>
         )}
       </section>
 

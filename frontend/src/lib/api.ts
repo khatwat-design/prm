@@ -13,13 +13,13 @@ export function clearSessionAndRedirectToLogin(): void {
   window.location.href = '/login';
 }
 
-export type User = { id: number; name: string; email: string; role: string };
+export type User = { id: number; name: string; email: string; username?: string | null; role: string };
 
-export async function login(email: string, password: string): Promise<{ token: string; user: User }> {
+export async function login(emailOrUsername: string, password: string): Promise<{ token: string; user: User }> {
   const res = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: emailOrUsername, password }),
   });
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
@@ -80,16 +80,24 @@ export interface DailyReportRow {
   is_total?: boolean;
 }
 
-/** عنصر واحد لمبيعات منصة (لإرسال الحفظ اليومي) */
+/** بند مبيعات بالمنتج + كمية (اختياري — إن وُجد يحسب الطلبات والإيراد تلقائياً) */
+export interface DailySaleItemEntry {
+  product_id: number;
+  quantity: number;
+  unit_price?: number;
+}
+
+/** عنصر واحد لمبيعات منصة (لإرسال الحفظ اليومي) — إما orders_count+order_value أو items */
 export interface DailySaleEntry {
   platform: PlatformValue;
-  orders_count: number;
-  order_value: number;
+  orders_count?: number;
+  order_value?: number;
+  items?: DailySaleItemEntry[];
 }
 
 /**
  * حفظ مبيعات اليوم كمجموعة — POST /api/daily-sales
- * Body: { date, entries: DailySaleEntry[] }
+ * Body: { date, entries: DailySaleEntry[] } — كل entry إما orders_count+order_value أو items (منتج+كمية)
  */
 export async function submitDailySales(
   date: string,
@@ -100,12 +108,23 @@ export async function submitDailySales(
     body: JSON.stringify({ date, entries }),
   });
 }
+/** بند مبيعات (منتج + كمية) في التقرير اليومي */
+export interface DailyReportLineItem {
+  id: number;
+  daily_report_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number | null;
+  product?: { id: number; name: string; price: string };
+}
+
 /** تقرير يومي واحد (من API الزبون) */
 export interface DailyReportItem {
   id: number;
   date: string;
   platform: string;
   leads_count: number;
+  link_clicks_count?: number;
   orders_count: number;
   ad_spend: number;
   order_value: number;
@@ -114,6 +133,39 @@ export interface DailyReportItem {
   cac: number;
   profit_after_spend: number;
   roas: number;
+  conversion_from_messages?: number;
+  conversion_from_visits?: number;
+  items?: DailyReportLineItem[];
+}
+
+/** منتج عميل */
+export interface Product {
+  id: number;
+  client_id: number;
+  name: string;
+  price: string;
+  sort_order: number;
+}
+
+export function getProducts() {
+  return api<Product[]>('/products');
+}
+
+export function createProduct(payload: { name: string; price: number; sort_order?: number }) {
+  return api<Product>('/products', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function updateProduct(id: number, payload: { name?: string; price?: number; sort_order?: number }) {
+  return api<Product>(`/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export function deleteProduct(id: number) {
+  return api<{ message: string }>(`/products/${id}`, { method: 'DELETE' });
+}
+
+export async function updateProfile(payload: { name?: string; username?: string | null }) {
+  const res = await api<{ user: User }>('/me', { method: 'PATCH', body: JSON.stringify(payload) });
+  return res.user;
 }
 /** استجابة paginate للتقارير */
 export interface DailyReportsResponse {
@@ -231,36 +283,86 @@ export function getMetaReport(params: { client_id: string; from: string; to: str
   return api<MetaReportResponse>(`/reports/meta?${q.toString()}`);
 }
 
-export function getMetaRedirectUrl() {
-  return api<{ url: string }>('/meta/redirect');
+/** للميديا باير: مرّر client_id لربط ذلك العميل. للزبون: لا تحتاج client_id. */
+export function getMetaRedirectUrl(clientId?: string | number) {
+  const q = clientId != null ? `?client_id=${clientId}` : '';
+  return api<{ url: string }>(`/meta/redirect${q}`);
 }
 
-/** قائمة الحسابات الإعلانية لميتا */
+/** قائمة الحسابات الإعلانية لميتا. للميديا باير: مرّر client_id. */
 export interface MetaAdAccount {
   id: string | null;
   account_id: string | null;
   name: string;
 }
-export function getMetaAdAccounts() {
-  return api<{ data: MetaAdAccount[] }>('/meta/ad-accounts');
+export function getMetaAdAccounts(clientId?: string | number) {
+  const q = clientId != null ? `?client_id=${clientId}` : '';
+  return api<{ data: MetaAdAccount[] }>(`/meta/ad-accounts${q}`);
 }
 
-/** حفظ الحساب الإعلاني المختار. السحب يتم لاحقاً من الواجهة أو لوحة التحليلات. */
-export function saveMetaAccount(ad_account_id: string) {
+/** حفظ الحساب الإعلاني. للميديا باير: مرّر client_id في الـ body. */
+export function saveMetaAccount(ad_account_id: string, clientId?: string | number) {
+  const body: Record<string, string | number> = { ad_account_id };
+  if (clientId != null) body.client_id = Number(clientId);
   return api<{ message: string; fb_ad_account_id: string }>('/meta/save-account', {
     method: 'POST',
-    body: JSON.stringify({ ad_account_id }),
+    body: JSON.stringify(body),
   });
 }
 
-/** سحب بيانات الحملات من ميتا (الصرف وعدد الرسائل) لنطاق الأيام وحفظها في التقارير اليومية */
-export function syncMetaCampaigns(params?: { from?: string; to?: string; days?: number }) {
+/** سحب بيانات الحملات من ميتا. للميديا باير: مرّر client_id في الـ body. */
+export function syncMetaCampaigns(params?: { from?: string; to?: string; days?: number; client_id?: string | number }) {
   const body: Record<string, string | number> = {};
   if (params?.from) body.from = params.from;
   if (params?.to) body.to = params.to;
   if (params?.days != null) body.days = params.days;
+  if (params?.client_id != null) body.client_id = Number(params.client_id);
   return api<{ message: string; synced_days: number; from: string; to: string; errors: string[] }>(
     '/meta/sync',
     { method: 'POST', body: JSON.stringify(body || {}) }
   );
+}
+
+/** نظرة شاملة — إحصائيات مع فلترة (ميديا باير + أدمن) */
+export interface OverviewStats {
+  total_order_value: number;
+  total_ad_spend: number;
+  clients_count: number;
+  users_count: number;
+  from?: string;
+  to?: string;
+  client_id?: number;
+}
+export function getOverviewStats(params?: { from?: string; to?: string; client_id?: string | number }) {
+  const q = new URLSearchParams();
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.client_id != null) q.set('client_id', String(params.client_id));
+  const query = q.toString();
+  return api<OverviewStats>(`/overview/stats${query ? `?${query}` : ''}`);
+}
+
+/** إدارة المستخدمين — أدمن فقط */
+export interface ApiUser {
+  id: number;
+  name: string;
+  email: string;
+  username: string | null;
+  role: string;
+  is_active: boolean;
+  client?: { id: number; business_name: string; meta_connected: boolean } | null;
+}
+export function getUsers(params?: { search?: string; role?: string; per_page?: number }) {
+  const q = new URLSearchParams();
+  if (params?.search) q.set('search', params.search);
+  if (params?.role) q.set('role', params.role);
+  if (params?.per_page) q.set('per_page', String(params.per_page));
+  const query = q.toString();
+  return api<{ data: ApiUser[]; current_page: number; last_page: number; total: number }>(`/users${query ? `?${query}` : ''}`);
+}
+export function createUser(payload: { name: string; email: string; username?: string; password: string; role: string; client_id?: number }) {
+  return api<ApiUser>('/users', { method: 'POST', body: JSON.stringify(payload) });
+}
+export function updateUser(id: number, payload: { name?: string; email?: string; username?: string | null; password?: string; role?: string; is_active?: boolean }) {
+  return api<ApiUser>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 }

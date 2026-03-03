@@ -12,16 +12,20 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * تسجيل الدخول وإصدار توكن API
+     * تسجيل الدخول بإيميل أو يوزرنيم + كلمة المرور
+     * الحقل "email" في الطلب يقبل إيميل أو يوزرنيم للتوافق مع الواجهة
      */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string', // يقبل إيميل أو يوزرنيم
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $login = $request->input('email');
+        $user = User::where('email', $login)
+            ->orWhere('username', $login)
+            ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -37,6 +41,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'username' => $user->username,
                 'role' => $user->role,
             ],
         ]);
@@ -53,6 +58,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'username' => $user->username,
                 'role' => $user->role,
             ],
         ];
@@ -66,6 +72,30 @@ class AuthController extends Controller
             ];
         }
         return response()->json($payload);
+    }
+
+    /**
+     * تحديث الملف الشخصي (الاسم، اليوزرنيم)
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'username' => 'nullable|string|max:64|unique:users,username,'.$user->id,
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'username' => $user->username,
+                'role' => $user->role,
+            ],
+        ]);
     }
 
     /**

@@ -100,10 +100,12 @@ class MetaAdsService
 
         $totalSpend = 0.0;
         $totalLeads = 0;
+        $totalLinkClicks = 0;
 
         foreach ($rows as $row) {
             $totalSpend += (float) ($row['spend'] ?? 0);
             $totalLeads += $this->countLeadsFromActions($row['actions'] ?? []);
+            $totalLinkClicks += $this->countLinkClicksFromActions($row['actions'] ?? []);
         }
 
         // تحديث أو إنشاء سطر منصة Facebook لذلك اليوم (المنصة الغالبة لميتا)
@@ -116,6 +118,7 @@ class MetaAdsService
             [
                 'ad_spend' => round($totalSpend, 2),
                 'leads_count' => $totalLeads,
+                'link_clicks_count' => $totalLinkClicks,
                 // orders_count و order_value يبقى كما أدخله الزبون أو 0
             ]
         );

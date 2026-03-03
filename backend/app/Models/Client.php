@@ -46,4 +46,12 @@ class Client extends Model
     {
         return $this->hasMany(MetaAdsData::class);
     }
+
+    /**
+     * منتجات الزبون (للمبيعات بالمنتج + الكمية)
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
 }

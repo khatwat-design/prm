@@ -1,14 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { api, createClient, getUnifiedReport, logout, type UnifiedReportResponse } from '@/lib/api';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  api,
+  createClient,
+  getUnifiedReport,
+  getMetaRedirectUrl,
+  getMetaAdAccounts,
+  saveMetaAccount,
+  syncMetaCampaigns,
+  logout,
+  type UnifiedReportResponse,
+  type MetaAdAccount,
+} from '@/lib/api';
 import type { CreateClientPayload } from '@/lib/api';
 import { Navbar } from '@/components/layout/Navbar';
+import Link from 'next/link';
 import {
   UserPlus,
   LogOut,
   Loader2,
+  Shield,
   MessageSquare,
   MousePointer,
   Megaphone,
@@ -16,10 +29,12 @@ import {
   TrendingUp,
   FileSpreadsheet,
   ChevronDown,
+  Link2,
+  Check,
 } from 'lucide-react';
 
 type PlatformToggle = 'meta' | 'tiktok';
-type Client = { id: number; business_name: string; user?: { name: string; email: string } };
+type Client = { id: number; business_name: string; meta_connected?: boolean; user?: { name: string; email: string } };
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'شغالة',
@@ -27,8 +42,9 @@ const STATUS_LABEL: Record<string, string> = {
   PENDING_REVIEW: 'قيد المراجعة',
 };
 
-export default function MediaBuyerPage() {
+function MediaBuyerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [platform, setPlatform] = useState<PlatformToggle>('meta');
   const [clients, setClients] = useState<Client[]>([]);
@@ -51,6 +67,20 @@ export default function MediaBuyerPage() {
   });
   const [addClientLoading, setAddClientLoading] = useState(false);
   const [addClientError, setAddClientError] = useState('');
+  const [metaAdAccounts, setMetaAdAccounts] = useState<MetaAdAccount[]>([]);
+  const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('');
+  const [loadingMetaAccounts, setLoadingMetaAccounts] = useState(false);
+  const [savingMetaAccount, setSavingMetaAccount] = useState(false);
+  const [syncingMeta, setSyncingMeta] = useState(false);
+  const [metaConnectLoading, setMetaConnectLoading] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('');
+
+  const selectedClient = clientId ? clients.find((c) => String(c.id) === clientId) : null;
+
+  useEffect(() => {
+    const u = localStorage.getItem('khtwat_user');
+    if (u) try { setCurrentUserRole(JSON.parse(u).role ?? ''); } catch { /* ignore */ }
+  }, []);
 
   function loadClients() {
     api<{ data: Client[] }>('/clients?per_page=100')
@@ -59,6 +89,16 @@ export default function MediaBuyerPage() {
   }
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    const meta = searchParams.get('meta');
+    const cid = searchParams.get('client_id');
+    if (meta === 'connected' && cid) {
+      setClientId(cid);
+      api<{ data: Client[] }>('/clients?per_page=100').then((res) => setClients(res.data ?? [])).catch(() => {});
+      window.history.replaceState({}, '', '/mediabuyer');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
@@ -74,6 +114,21 @@ export default function MediaBuyerPage() {
     }
     loadClients();
   }, [mounted, router]);
+
+  useEffect(() => {
+    if (!clientId || !selectedClient?.meta_connected) {
+      setMetaAdAccounts([]);
+      setSelectedMetaAccountId('');
+      return;
+    }
+    setLoadingMetaAccounts(true);
+    getMetaAdAccounts(clientId)
+      .then((res) => {
+        setMetaAdAccounts(res.data ?? []);
+      })
+      .catch(() => setMetaAdAccounts([]))
+      .finally(() => setLoadingMetaAccounts(false));
+  }, [clientId, selectedClient?.meta_connected]);
 
   useEffect(() => {
     if (!clientId || !from || !to) {
@@ -126,6 +181,12 @@ export default function MediaBuyerPage() {
           subtitle="صرف الإعلان مقابل مبيعات الزبون — ROAS"
           rightSlot={
             <div className="flex items-center gap-2">
+              {currentUserRole === 'admin' && (
+                <Link href="/admin" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                  <Shield className="h-4 w-4" />
+                  لوحة الأدمن
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setShowAddClient(true)}
@@ -182,7 +243,7 @@ export default function MediaBuyerPage() {
                 >
                   <option value="">-- اختر الزبون --</option>
                   {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.business_name}</option>
+                    <option key={c.id} value={c.id}>{c.business_name}{c.meta_connected ? ' ✓ ميتا' : ''}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none text-slate-400" />
@@ -194,10 +255,84 @@ export default function MediaBuyerPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">إلى</label>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-800 dark:border-slate-600 dark:bg-slate-100" />
             </div>
           </div>
         </div>
+
+        {clientId && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-3">ربط ميتا لهذا العميل</h3>
+            {!selectedClient?.meta_connected ? (
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-slate-600 dark:text-slate-300">الحساب غير مرتبط بميتا. اضغط لربط حساب فيسبوك للعميل.</p>
+                <button
+                  type="button"
+                  disabled={metaConnectLoading}
+                  onClick={() => {
+                    setMetaConnectLoading(true);
+                    getMetaRedirectUrl(clientId)
+                      .then((r) => { if (r.url) window.location.href = r.url; })
+                      .catch(() => setMetaConnectLoading(false));
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-[#0668E1] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70"
+                >
+                  {metaConnectLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  ربط ميتا
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[220px]">
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">الحساب الإعلاني</label>
+                  {loadingMetaAccounts ? (
+                    <div className="flex items-center gap-2 py-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> جاري الجلب...</div>
+                  ) : (
+                    <select
+                      value={selectedMetaAccountId}
+                      onChange={(e) => setSelectedMetaAccountId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                      <option value="">اختر الحساب الإعلاني</option>
+                      {metaAdAccounts.map((a) => (
+                        <option key={a.id || a.account_id} value={a.id || a.account_id || ''}>{a.name || a.id || a.account_id || '—'}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={savingMetaAccount || !selectedMetaAccountId}
+                  onClick={() => {
+                    if (!selectedMetaAccountId) return;
+                    setSavingMetaAccount(true);
+                    saveMetaAccount(selectedMetaAccountId, clientId)
+                      .then(() => { loadClients(); })
+                      .finally(() => setSavingMetaAccount(false));
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 disabled:opacity-60"
+                >
+                  {savingMetaAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  حفظ الحساب
+                </button>
+                <button
+                  type="button"
+                  disabled={syncingMeta}
+                  onClick={() => {
+                    setSyncingMeta(true);
+                    syncMetaCampaigns({ days: 30, client_id: clientId })
+                      .then(() => loadClients())
+                      .finally(() => setSyncingMeta(false));
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-brand-orange px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-dark disabled:opacity-70"
+                >
+                  {syncingMeta ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  سحب بيانات ميتا (30 يوم)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
@@ -420,5 +555,17 @@ export default function MediaBuyerPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MediaBuyerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-brand-black" dir="rtl">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+      </div>
+    }>
+      <MediaBuyerContent />
+    </Suspense>
   );
 }
