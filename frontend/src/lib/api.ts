@@ -64,7 +64,8 @@ export const PLATFORMS = [
 
 export type PlatformValue = (typeof PLATFORMS)[number]['value'];
 
-export interface DailyReportRow {
+/** صف تقرير يومي (من واجهة أخرى — مع id) */
+export interface DailyReportRecord {
   id: number;
   date: string;
   platform: string;
