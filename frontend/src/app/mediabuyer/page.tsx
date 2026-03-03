@@ -11,7 +11,6 @@ import {
   getMetaAdAccounts,
   saveMetaAccount,
   syncMetaCampaigns,
-  logout,
   type UnifiedReportResponse,
   type DailyReportResponse,
   type MetaAdAccount,
@@ -19,7 +18,6 @@ import {
 import type { CreateClientPayload } from '@/lib/api';
 import { MediaBuyerNav, type MediaBuyerSection } from '@/components/dashboard/MediaBuyerNav';
 import {
-  UserPlus,
   Loader2,
   MessageSquare,
   MousePointer,
