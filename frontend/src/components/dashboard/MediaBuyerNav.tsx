@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { BarChart3, FileSpreadsheet, UserPlus, LogOut, Menu } from 'lucide-react';
 import { logout } from '@/lib/api';
 
-export type MediaBuyerSection = 'unified' | 'sales';
+export type MediaBuyerSection = 'sales' | 'unified';
 
 const sections: { id: MediaBuyerSection; label: string; icon: typeof BarChart3 }[] = [
-  { id: 'unified', label: 'التقارير الموحدة', icon: BarChart3 },
-  { id: 'sales', label: 'تفاصيل المبيعات', icon: FileSpreadsheet },
+  { id: 'sales', label: 'المبيعات', icon: FileSpreadsheet },
+  { id: 'unified', label: 'الحملات', icon: BarChart3 },
 ];
 
 interface MediaBuyerNavProps {
