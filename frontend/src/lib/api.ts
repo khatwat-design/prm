@@ -263,6 +263,34 @@ export function getUnifiedReport(params: { client_id: string; from: string; to: 
   return api<UnifiedReportResponse>(`/reports/unified?${q.toString()}`);
 }
 
+/** تقرير يومي لزبون — تفاصيل المبيعات حسب التاريخ والمنصة (للميديا باير) */
+export interface DailyReportRow {
+  date: string;
+  platform: string;
+  is_total: boolean;
+  leads_count: number;
+  orders_count: number;
+  ad_spend: number;
+  order_value: number;
+  cost_per_lead: number;
+  conversion_rate: number;
+  cac: number;
+  profit_after_spend: number;
+  roas: number;
+}
+export interface DailyReportResponse {
+  client: { id: number; business_name: string };
+  from: string;
+  to: string;
+  platform_filter: string | null;
+  rows: DailyReportRow[];
+}
+export function getDailyReport(params: { client_id: string; from: string; to: string; platform?: string }) {
+  const q = new URLSearchParams({ client_id: params.client_id, from: params.from, to: params.to });
+  if (params.platform) q.set('platform', params.platform);
+  return api<DailyReportResponse>(`/reports/daily?${q.toString()}`);
+}
+
 /** تقرير ميتا (للتوافق مع الاستدعاءات القديمة إن وُجدت) */
 export interface MetaReportObjective {
   spend: number;

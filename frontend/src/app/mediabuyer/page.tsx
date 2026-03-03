@@ -6,22 +6,21 @@ import {
   api,
   createClient,
   getUnifiedReport,
+  getDailyReport,
   getMetaRedirectUrl,
   getMetaAdAccounts,
   saveMetaAccount,
   syncMetaCampaigns,
   logout,
   type UnifiedReportResponse,
+  type DailyReportResponse,
   type MetaAdAccount,
 } from '@/lib/api';
 import type { CreateClientPayload } from '@/lib/api';
-import { Navbar } from '@/components/layout/Navbar';
-import Link from 'next/link';
+import { MediaBuyerNav, type MediaBuyerSection } from '@/components/dashboard/MediaBuyerNav';
 import {
   UserPlus,
-  LogOut,
   Loader2,
-  Shield,
   MessageSquare,
   MousePointer,
   Megaphone,
@@ -74,6 +73,10 @@ function MediaBuyerContent() {
   const [syncingMeta, setSyncingMeta] = useState(false);
   const [metaConnectLoading, setMetaConnectLoading] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string>('');
+  const [activeSection, setActiveSection] = useState<MediaBuyerSection>('unified');
+  const [dailyReport, setDailyReport] = useState<DailyReportResponse | null>(null);
+  const [dailyReportLoading, setDailyReportLoading] = useState(false);
+  const [dailyReportError, setDailyReportError] = useState('');
 
   const selectedClient = clientId ? clients.find((c) => String(c.id) === clientId) : null;
 
@@ -145,6 +148,20 @@ function MediaBuyerContent() {
       .finally(() => setLoading(false));
   }, [clientId, from, to, platform]);
 
+  useEffect(() => {
+    if (activeSection !== 'sales' || !clientId || !from || !to) {
+      setDailyReport(null);
+      setDailyReportError('');
+      return;
+    }
+    setDailyReportLoading(true);
+    setDailyReportError('');
+    getDailyReport({ client_id: clientId, from, to, platform: platform === 'tiktok' ? 'tiktok' : platform === 'meta' ? 'other' : undefined })
+      .then(setDailyReport)
+      .catch((err) => setDailyReportError(err instanceof Error ? err.message : 'فشل تحميل تفاصيل المبيعات'))
+      .finally(() => setDailyReportLoading(false));
+  }, [activeSection, clientId, from, to, platform]);
+
   async function handleAddClient(e: React.FormEvent) {
     e.preventDefault();
     setAddClientError('');
@@ -174,41 +191,122 @@ function MediaBuyerContent() {
   const roas = data?.roas ?? 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-brand-black p-4 md:p-8" dir="rtl">
-      <div className="max-w-[1400px] mx-auto">
-        <Navbar
-          title="التقارير الموحدة"
-          subtitle="صرف الإعلان مقابل مبيعات الزبون — ROAS"
-          rightSlot={
-            <div className="flex items-center gap-2">
-              {currentUserRole === 'admin' && (
-                <Link href="/admin" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-                  <Shield className="h-4 w-4" />
-                  لوحة الأدمن
-                </Link>
+    <div className="min-h-screen bg-slate-50 dark:bg-brand-black" dir="rtl">
+      <MediaBuyerNav
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onAddClient={() => setShowAddClient(true)}
+        isAdmin={currentUserRole === 'admin'}
+      />
+      <main className="md:mr-56 pt-14 md:pt-0 md:min-h-screen p-4 md:p-8">
+        <div className="max-w-[1400px] mx-auto">
+          {activeSection === 'sales' ? (
+            <>
+              <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">تفاصيل المبيعات</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">جدول يومي حسب التاريخ والمنصة: الطلبات، الإيراد، الصرف، ROAS، الربح.</p>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50 mb-4">
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="min-w-[200px] flex-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">الزبون</label>
+                    <div className="relative">
+                      <select
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-10 text-slate-800 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                      >
+                        <option value="">-- اختر الزبون --</option>
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>{c.business_name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none text-slate-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">من</label>
+                    <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">إلى</label>
+                    <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80 p-2">
+                    <button type="button" onClick={() => setPlatform('meta')} className={`rounded-xl px-4 py-2 text-sm font-medium ${platform === 'meta' ? 'bg-[#0668E1] text-white' : 'text-slate-600 dark:text-slate-400'}`}>Meta</button>
+                    <button type="button" onClick={() => setPlatform('tiktok')} className={`rounded-xl px-4 py-2 text-sm font-medium ${platform === 'tiktok' ? 'bg-black text-white' : 'text-slate-600 dark:text-slate-400'}`}>TikTok</button>
+                  </div>
+                </div>
+              </div>
+              {dailyReportError && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">{dailyReportError}</div>
               )}
-              <button
-                type="button"
-                onClick={() => setShowAddClient(true)}
-                className="flex items-center gap-2 rounded-xl bg-brand-orange px-4 py-2 text-sm font-medium text-white shadow-card hover:bg-brand-orange-dark"
-              >
-                <UserPlus className="h-4 w-4" />
-                إضافة زبون
-              </button>
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-card hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                <LogOut className="h-4 w-4" />
-                خروج
-              </button>
-            </div>
-          }
-        />
-
+              {dailyReportLoading && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-8 dark:border-slate-700 dark:bg-slate-800/50 flex flex-col items-center justify-center gap-4">
+                  <Loader2 className="h-10 w-10 animate-spin text-brand-orange" />
+                  <p className="text-slate-500 dark:text-slate-400">جاري تحميل تفاصيل المبيعات...</p>
+                </div>
+              )}
+              {dailyReport && !dailyReportLoading && (
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <FileSpreadsheet className="h-5 w-5 text-brand-orange" />
+                    <h2 className="font-semibold text-slate-800 dark:text-white">تفاصيل المبيعات اليومية — {dailyReport.client.business_name}</h2>
+                    <span className="mr-auto text-sm text-slate-600 dark:text-slate-300">من {dailyReport.from} إلى {dailyReport.to}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/80">
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">التاريخ</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">المنصة</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">الرسائل</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">الطلبات</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">الصرف ($)</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">الإيراد ($)</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">تكلفة/نتيجة</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">تحويل %</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">CAC</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">الربح ($)</th>
+                          <th className="text-right py-2 px-3 font-semibold text-slate-700 dark:text-slate-300">ROAS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailyReport.rows.length === 0 ? (
+                          <tr><td colSpan={11} className="py-6 text-center text-slate-500">لا توجد بيانات لهذه الفترة.</td></tr>
+                        ) : (
+                          dailyReport.rows.map((row, i) => (
+                            <tr key={row.date + row.platform + i} className={`border-b border-slate-100 dark:border-slate-700 ${row.is_total ? 'bg-brand-orange/10 dark:bg-brand-orange/20 font-medium' : ''}`}>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.date}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.is_total ? 'الإجمالي' : row.platform}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.leads_count}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.orders_count}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.ad_spend.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.order_value.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.cost_per_lead.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.conversion_rate.toFixed(1)}%</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.cac.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.profit_after_spend.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.roas.toFixed(2)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+              {!clientId && (
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-card dark:border-slate-700 dark:bg-slate-800/50">
+                  <FileSpreadsheet className="mx-auto h-12 w-12 text-slate-400" />
+                  <p className="mt-4 text-slate-500 dark:text-slate-400">اختر زبوناً وتاريخ من–إلى لعرض تفاصيل المبيعات.</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">التقارير الموحدة</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">صرف الإعلان مقابل مبيعات الزبون — ROAS وحملات ميتا/تيك توك.</p>
         {/* زر تبديل: Meta | TikTok */}
-        <div className="mt-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-card dark:border-slate-700 dark:bg-slate-800/50 w-fit">
+        <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-card dark:border-slate-700 dark:bg-slate-800/50 w-fit">
           <button
             type="button"
             onClick={() => setPlatform('meta')}
@@ -518,7 +616,10 @@ function MediaBuyerContent() {
             <p className="mt-4 text-slate-500 dark:text-slate-400">اختر زبوناً وتاريخ من–إلى لعرض التقرير الموحد.</p>
           </div>
         )}
-      </div>
+            </>
+          )}
+        </div>
+      </main>
 
       {showAddClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">

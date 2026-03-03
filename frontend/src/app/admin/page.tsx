@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   getOverviewStats,
   getUsers,
@@ -11,9 +10,8 @@ import {
   type OverviewStats,
   type ApiUser,
 } from '@/lib/api';
-import { Navbar } from '@/components/layout/Navbar';
-import { LogOut, Loader2, Users, BarChart3, UserPlus, Pencil, Check, X } from 'lucide-react';
-import { logout } from '@/lib/api';
+import { AdminNav, type AdminSection } from '@/components/dashboard/AdminNav';
+import { Loader2, Users, BarChart3, UserPlus, Pencil, Check, X } from 'lucide-react';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -34,6 +32,7 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<Record<number, Partial<ApiUser>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [activeSection, setActiveSection] = useState<AdminSection>('overview');
 
   useEffect(() => setMounted(true), []);
 
@@ -127,36 +126,18 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-brand-black p-4 md:p-8" dir="rtl">
-      <div className="max-w-[1200px] mx-auto">
-        <Navbar
-          title="لوحة الأدمن"
-          subtitle="نظرة شاملة وإدارة المستخدمين"
-          rightSlot={
-            <div className="flex items-center gap-2">
-              <Link
-                href="/mediabuyer"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              >
-                التقارير والزبائن
-              </Link>
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                <LogOut className="h-4 w-4" />
-                خروج
-              </button>
-            </div>
-          }
-        />
-
-        {/* نظرة شاملة */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
+    <div className="min-h-screen bg-slate-50 dark:bg-brand-black" dir="rtl">
+      <AdminNav activeSection={activeSection} onSectionChange={setActiveSection} />
+      <main className="md:mr-56 pt-14 md:pt-0 md:min-h-screen p-4 md:p-8">
+        <div className="max-w-[1200px] mx-auto">
+          {activeSection === 'overview' && (
+            <>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">النظرة الشاملة</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">إحصائيات إجمالية للمبيعات والصرف والعملاء حسب الفترة.</p>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="h-5 w-5 text-brand-orange" />
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">نظرة شاملة</h2>
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">الفترة</h2>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
             <label className="flex items-center gap-2">
@@ -191,13 +172,18 @@ export default function AdminPage() {
             </div>
           )}
         </section>
+            </>
+          )}
 
-        {/* المستخدمون */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden">
+          {activeSection === 'users' && (
+            <>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">المستخدمون</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">إدارة حسابات المستخدمين والأدوار.</p>
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-card dark:border-slate-700 dark:bg-slate-800/50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-brand-orange" />
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">المستخدمون</h2>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">قائمة المستخدمين</h2>
             </div>
             <button
               type="button"
@@ -269,7 +255,10 @@ export default function AdminPage() {
             </div>
           )}
         </section>
-      </div>
+            </>
+          )}
+        </div>
+      </main>
 
       {showAddUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
