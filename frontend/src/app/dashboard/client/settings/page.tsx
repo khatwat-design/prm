@@ -1,17 +1,15 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getMe, updateProfile } from '@/lib/api';
 import { Toast, type ToastType } from '@/components/ui/Toast';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, User } from 'lucide-react';
 
 function ClientSettingsContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const [clientProfile, setClientProfile] = useState<{ meta_connected: boolean; fb_ad_account_id: string | null } | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', username: '' });
 
@@ -39,27 +37,9 @@ function ClientSettingsContent() {
   useEffect(() => {
     if (!mounted) return;
     getMe()
-      .then((res) => {
-        if (res.client) setClientProfile({ meta_connected: res.client.meta_connected, fb_ad_account_id: res.client.fb_ad_account_id ?? null });
-        setProfileForm({ name: res.user.name, username: res.user.username ?? '' });
-      })
-      .catch(() => setClientProfile(null));
+      .then((res) => setProfileForm({ name: res.user.name, username: res.user.username ?? '' }))
+      .catch(() => {});
   }, [mounted]);
-
-  useEffect(() => {
-    const meta = searchParams.get('meta');
-    if (meta === 'connected') {
-      setToast({ message: 'تم ربط حساب ميتا بنجاح.', type: 'success' });
-      window.history.replaceState({}, '', '/dashboard/client/settings');
-      getMe().then((res) => {
-        if (res.client) setClientProfile({ meta_connected: res.client.meta_connected, fb_ad_account_id: res.client.fb_ad_account_id ?? null });
-      }).catch(() => {});
-    } else if (meta === 'error' || meta === 'token_exchange_failed' || meta === 'invalid_state' || meta === 'no_client') {
-      const msg = searchParams.get('message') || (meta === 'token_exchange_failed' ? 'فشل استبدال التوكن.' : 'حدث خطأ أثناء الربط.');
-      setToast({ message: msg, type: 'error' });
-      window.history.replaceState({}, '', '/dashboard/client/settings');
-    }
-  }, [searchParams]);
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -93,13 +73,16 @@ function ClientSettingsContent() {
 
   return (
     <>
-      <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-2">الإعدادات</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        الملف الشخصي وربط حساب ميتا لسحب الصرف وعدد الرسائل تلقائياً.
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">الإعدادات</h1>
+      <p className="text-sm text-slate-600 dark:text-slate-400 mb-8">
+        تحديث الملف الشخصي (الاسم واسم المستخدم).
       </p>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50 mb-6">
-        <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-3">الملف الشخصي</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <User className="h-5 w-5 text-brand-orange" />
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">الملف الشخصي</h2>
+        </div>
         <form onSubmit={handleSaveProfile} className="space-y-3">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">الاسم</label>
           <input
@@ -125,19 +108,6 @@ function ClientSettingsContent() {
             حفظ الملف الشخصي
           </button>
         </form>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card dark:border-slate-700 dark:bg-slate-800/50">
-        <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-2">ربط ميتا</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          ربط حساب ميتا يتم من قبل الميديا باير لكل عميل. إذا لم يكن حسابك مرتبطاً أو تريد تغيير الحساب الإعلاني، تواصل مع الميديا باير.
-        </p>
-        {clientProfile?.meta_connected && (
-          <p className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-            <Check className="h-4 w-4" />
-            حساب ميتا مرتبط — يتم سحب الصرف والرسائل تلقائياً عند استخدام لوحة التحليلات.
-          </p>
-        )}
       </section>
 
       {toast && (

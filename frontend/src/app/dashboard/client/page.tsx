@@ -161,12 +161,17 @@ export default function ClientDashboardPage() {
       acc.orders += dayReports.reduce((s, r) => s + (r.orders_count || 0), 0);
       acc.revenue += dayReports.reduce((s, r) => s + Number(r.order_value || 0), 0);
       acc.spend += dayReports.reduce((s, r) => s + Number(r.ad_spend || 0), 0);
+      acc.leads += dayReports.reduce((s, r) => s + (r.leads_count || 0), 0);
+      acc.linkClicks += dayReports.reduce((s, r) => s + (r.link_clicks_count || 0), 0);
       return acc;
     },
-    { orders: 0, revenue: 0, spend: 0 }
+    { orders: 0, revenue: 0, spend: 0, leads: 0, linkClicks: 0 }
   );
   const profit = totals.revenue - totals.spend;
   const roas = totals.spend > 0 ? totals.revenue / totals.spend : 0;
+  const cac = totals.orders > 0 ? totals.spend / totals.orders : 0;
+  const conversionFromMessages = totals.leads > 0 ? (totals.orders / totals.leads) * 100 : 0;
+  const conversionFromVisits = totals.linkClicks > 0 ? (totals.orders / totals.linkClicks) * 100 : 0;
   const chartDates = dates.slice(0, chartRangeDays);
 
   const lastDate = dates[0];
@@ -216,24 +221,12 @@ export default function ClientDashboardPage() {
       <div className="relative flex flex-col gap-4 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">لوحة التحليلات</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">التحليلات</h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-md">
-              تتبع أداء مبيعاتك وإيراداتك وصرفك الإعلاني خلال الفترة المختارة.
+              تتبع الصرف والمبيعات، تكلفة الاستحواذ (CAC)، ونسبة التحويل خلال الفترة المختارة.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            {metaConnected !== null && (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-sm font-medium shadow-sm ${
-                  metaConnected
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 dark:bg-emerald-500/20'
-                    : 'bg-red-500/15 text-red-700 dark:text-red-400 dark:bg-red-500/20'
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${metaConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                {metaConnected ? 'مرتبط بميتا' : 'يحتاج ربط'}
-              </span>
-            )}
             <button
               type="button"
               onClick={() => setSalesModalOpen(true)}
@@ -250,13 +243,13 @@ export default function ClientDashboardPage() {
       </div>
 
       {/* فلتر الفترة */}
-      <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar className="h-4 w-4 text-brand-orange" />
-          <span className="text-sm font-semibold text-slate-800 dark:text-white">اختر نطاق التاريخ</span>
+      <section className="mb-6 rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-4 sm:p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="h-5 w-5 text-brand-orange" />
+          <span className="text-base font-semibold text-slate-800 dark:text-white">نطاق التاريخ</span>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          عرض التحليلات والرسوم البيانية للفترة من تاريخ البداية إلى تاريخ النهاية. يمكنك اختيار يوم واحد (نفس التاريخ في الحقلين) أو عدة أيام.
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          اختر من وإلى لعرض التحليلات والرسوم البيانية.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2">
@@ -294,7 +287,7 @@ export default function ClientDashboardPage() {
           <p className="text-slate-500 dark:text-slate-400">جاري تحميل البيانات...</p>
         </div>
       ) : dates.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+        <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-12 text-center shadow-sm">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
             <BarChart3 className="h-8 w-8 text-slate-400" />
           </div>
@@ -313,9 +306,9 @@ export default function ClientDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Hero Metrics — 4 بطاقات تفاعلية */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+          {/* Hero Metrics — 4 بطاقات */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
                 <Zap className="h-4 w-4" />
                 <span className="text-xs font-medium">إجمالي الصرف</span>
@@ -325,7 +318,7 @@ export default function ClientDashboardPage() {
                 <TrendBadge value={trendSpend} />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
                 <DollarSign className="h-4 w-4" />
                 <span className="text-xs font-medium">إجمالي المبيعات</span>
@@ -335,7 +328,7 @@ export default function ClientDashboardPage() {
                 <TrendBadge value={trendRevenue} />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
                 <Target className="h-4 w-4" />
                 <span className="text-xs font-medium">صافي الربح</span>
@@ -347,7 +340,7 @@ export default function ClientDashboardPage() {
                 <TrendBadge value={trendProfit} />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-2">
                 <TrendingUp className="h-4 w-4 text-brand-orange" />
                 <span className="text-xs font-medium">معدل العائد (ROAS)</span>
@@ -359,8 +352,36 @@ export default function ClientDashboardPage() {
             </div>
           </div>
 
-          {/* Area Chart — الصرف والمبيعات خلال 7 أو 30 يوماً */}
-          <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+          {/* تكلفة الاستحواذ ونسبة التحويل — واضحة ومميزة */}
+          <section className="mb-8 rounded-2xl border-2 border-brand-orange/30 bg-gradient-to-b from-brand-orange/5 to-transparent dark:from-brand-orange/10 dark:to-transparent p-5 sm:p-6 shadow-sm dark:border-brand-orange/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="h-5 w-5 text-brand-orange" />
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">تكلفة الاستحواذ ونسبة التحويل</h2>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-5">
+              CAC = تكلفة جلب طلب واحد. نسبة التحويل = من كل 100 رسالة أو نقرة كم طلب تحقق.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-800/80 dark:border-slate-600 p-5 shadow-sm">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">تكلفة الاستحواذ (CAC)</p>
+                <p className="text-2xl font-bold text-brand-orange tabular-nums">{cac.toFixed(2)} $</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{cac > 0 ? `كل 1$ صرف ≈ ${(1 / cac).toFixed(1)} طلب` : '—'}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-800/80 dark:border-slate-600 p-5 shadow-sm">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">نسبة التحويل من الرسائل</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">{conversionFromMessages.toFixed(1)}%</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">من كل 100 رسالة → {conversionFromMessages.toFixed(1)} طلب</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-800/80 dark:border-slate-600 p-5 shadow-sm">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">نسبة التحويل من النقرات</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">{totals.linkClicks > 0 ? conversionFromVisits.toFixed(1) : '—'}%</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{totals.linkClicks > 0 ? `من كل 100 نقرة → ${conversionFromVisits.toFixed(1)} طلب` : 'لا نقرات مسجّلة لهذه الفترة'}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Area Chart — الصرف والمبيعات */}
+          <section className="mb-8 rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-4 sm:p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-800 dark:text-white">الصرف والمبيعات</h2>
@@ -414,7 +435,7 @@ export default function ClientDashboardPage() {
           </section>
 
           {/* Pie Chart — توزيع المبيعات حسب المنصة */}
-          <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+          <section className="mb-8 rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <PieChartIcon className="h-4 w-4 text-brand-orange" />
               <h2 className="text-base font-semibold text-slate-800 dark:text-white">توزيع المبيعات حسب المنصة</h2>
@@ -449,9 +470,9 @@ export default function ClientDashboardPage() {
           </section>
 
           {/* تفصيل يوم بيوم */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:bg-brand-black/40">
+          <section className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 p-4 sm:p-5 shadow-sm">
             <div className="flex flex-col gap-3 mb-4">
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">تفصيل كل يوم</h2>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">تفصيل كل يوم</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 اضغط على أي يوم لرؤية الأرقام الكاملة وتوزيع المبيعات حسب المنصة.
               </p>

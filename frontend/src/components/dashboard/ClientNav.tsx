@@ -8,9 +8,9 @@ import { LayoutDashboard, Settings, LogOut, Menu, Sun, Moon, Package } from 'luc
 import { logout } from '@/lib/api';
 
 const navItems = [
-  { href: '/dashboard/client', label: 'الرئيسية', icon: LayoutDashboard },
+  { href: '/dashboard/client', label: 'التحليلات', icon: LayoutDashboard },
   { href: '/dashboard/client/products', label: 'المنتجات', icon: Package },
-  { href: '/dashboard/client/settings', label: 'إعدادات الربط', icon: Settings },
+  { href: '/dashboard/client/settings', label: 'الإعدادات', icon: Settings },
 ] as const;
 
 export function ClientNav() {

@@ -122,11 +122,11 @@ export default function ClientProductsPage() {
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">المنتجات</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            أضف منتجاتك ثم اخترها عند إدخال المبيعات (منتج + كمية) من لوحة التحليلات.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            أضف منتجاتك ثم اخترها عند إدخال المبيعات (منتج + كمية) من صفحة التحليلات.
           </p>
         </div>
         <button
